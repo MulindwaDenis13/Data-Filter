@@ -101,7 +101,7 @@ class DataFilterController extends Controller
                         array_push($name_checks, $contains_name);
                     }
                 }
-                if (count($name_checks) > 0) {
+                if (count($name_checks) <= 0) {
                     array_push($new_transactions_filter, $this->attach_new_object($cash_book, 'Cash Book'));
                 }
             }
