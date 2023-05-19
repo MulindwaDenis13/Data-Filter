@@ -139,3 +139,5 @@ class DataFilterController extends Controller
         }
     }
 }
+
+# https://stackoverflow.com/questions/21952723/how-to-install-composer-on-a-mac
