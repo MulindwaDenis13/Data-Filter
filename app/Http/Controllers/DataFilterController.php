@@ -10,6 +10,18 @@ use Illuminate\Http\Request;
 
 class DataFilterController extends Controller
 {
+    protected $cash_book_path;
+    protected $bank_statement_path;
+    public function __construct()
+    {
+        $this->cash_book_path = storage_path('app/public/cashbook.json');
+        $this->bank_statement_path = storage_path('app/public/bank_statement.json');
+    }
+
+    public function create_json_file($path)
+    {
+        touch($path);
+    }
 
     public function handle_import($path, $file, $import)
     {
@@ -27,7 +39,7 @@ class DataFilterController extends Controller
                 'import_file' => 'required|file|mimes:xlsx,xls,csv',
             ]);
 
-            $this->handle_import(storage_path('app/public/bank_statement.json'), request()->file('import_file'), new BankStatementImport);
+            $this->handle_import($this->bank_statement_path, request()->file('import_file'), new BankStatementImport);
 
             return response()->json(['message' => true]);
 
@@ -45,7 +57,7 @@ class DataFilterController extends Controller
                 'import_file' => 'required|file|mimes:xlsx,xls,csv',
             ]);
 
-            $this->handle_import(storage_path('app/public/cashbook.json'), request()->file('import_file'), new CashBookImport);
+            $this->handle_import($this->cash_book_path, request()->file('import_file'), new CashBookImport);
 
             return response()->json(['message' => true]);
 
@@ -104,6 +116,7 @@ class DataFilterController extends Controller
                 if (count($name_checks) <= 0) {
                     array_push($new_transactions_filter, $this->attach_new_object($cash_book, 'Cash Book'));
                 }
+                unset($name_checks);
             }
         }
 
@@ -115,10 +128,14 @@ class DataFilterController extends Controller
         return json_decode(file_get_contents($path));
     }
 
-    public function all_data(): array
+    public function all_data(array $paths): array
     {
-        $cash_books = $this->get_json_content(storage_path('app/public/cashbook.json')) ?? [];
-        $bank_statements = $this->get_json_content(storage_path('app/public/bank_statement.json')) ?? [];
+        foreach ($paths as $path) {
+            if (!file_exists($path))
+                $this->create_json_file($path);
+        }
+        $cash_books = $this->get_json_content($paths[0]) ?? [];
+        $bank_statements = $this->get_json_content($paths[1]) ?? [];
         $all_filter = array_merge($this->loop_transactions($bank_statements, $cash_books));
         shuffle($all_filter);
         $response = [
@@ -132,7 +149,7 @@ class DataFilterController extends Controller
     public function display()
     {
         try {
-            $data = $this->all_data();
+            $data = $this->all_data([$this->cash_book_path, $this->bank_statement_path]);
             return view('index', compact('data'))->with('i');
         } catch (\Throwable $th) {
             return response()->json(['message' => false, 'error' => $th->getMessage()]);
@@ -142,3 +159,5 @@ class DataFilterController extends Controller
 
 # https://stackoverflow.com/questions/21952723/how-to-install-composer-on-a-mac
 // https://stitcher.io/blog/php-82-upgrade-mac
+// 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
+// https://extendsclass.com/csv-generator.html
