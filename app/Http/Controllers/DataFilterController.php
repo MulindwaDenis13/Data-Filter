@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Imports\CashBookImport;
 use App\Imports\BankStatementImport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\CashBookExport;
+use App\Exports\BankStatementExport;
 
 use Illuminate\Http\Request;
 
@@ -87,7 +89,7 @@ class DataFilterController extends Controller
                 return $next ?? ($item->no == $bank_statement->reference_no) ? $item : $next;
             }, null);
             if (is_null($check_cash_book)) {
-                array_push($new_transactions_filter, $this->attach_new_object($bank_statement, 'Bank statement'));
+                array_push($new_transactions_filter, $this->attach_new_object($bank_statement, 'Bank Statement'));
             }
         }
 
@@ -128,6 +130,7 @@ class DataFilterController extends Controller
         return json_decode(file_get_contents($path));
     }
 
+
     public function all_data(array $paths): array
     {
         foreach ($paths as $path) {
@@ -154,6 +157,63 @@ class DataFilterController extends Controller
         } catch (\Throwable $th) {
             return response()->json(['message' => false, 'error' => $th->getMessage()]);
         }
+    }
+
+    public function export_data($value)
+    {
+        try {
+            $data = $this->all_data([$this->cash_book_path, $this->bank_statement_path]);
+
+            if ($value == 'bank') {
+                $filter_cash = $this->filter_support($data['all_filter'], 'Cash Book');
+                $bank_statements = $data['bank_statements'];
+                if (count($bank_statements) > 0) {
+                    foreach ($filter_cash as $filter) {
+                        $return_object = (object) [];
+                        $return_object->narration = $filter->name;
+                        $return_object->date = $filter->date;
+                        $return_object->reference_no = $filter->reference_no;
+                        $return_object->money_in = $filter->amount;
+                        $return_object->money_out = $filter->amount;
+                        $return_object->balance = $filter->balance;
+                        $bank_statements[] = $return_object;
+                    }
+                }
+                return Excel::download(new BankStatementExport($bank_statements), 'bank_statements.xlsx');
+            }
+
+            if ($value == 'cash') {
+                $filter_bank = $this->filter_support($data['all_filter'], 'Bank Statement');
+                $cashbook = $data['cashbook'];
+                if (count($cashbook) > 0) {
+                    foreach ($filter_bank as $filter) {
+                        $return_object = (object) [];
+                        $return_object->name = $filter->name;
+                        $return_object->date = $filter->date;
+                        $return_object->no = $filter->no;
+                        $return_object->amount = $filter->amount;
+                        $return_object->balance = $filter->balance;
+                        $return_object->account = $filter->account;
+                        $return_object->split = $filter->split;
+                        $return_object->description = $filter->description;
+                        $return_object->transaction_type = $filter->transaction_type;
+                        $cashbook[] = $return_object;
+                    }
+                }
+                return Excel::download(new CashBookExport($cashbook), 'cashbook.xlsx');
+            }
+        } catch (\Throwable $th) {
+            return response()->json(['message' => false, 'error' => $th->getMessage()]);
+        }
+
+    }
+
+    public function filter_support(array $data, string $result)
+    {
+        $return_data = array_filter($data, static function ($item) use ($result) {
+            return $item->exists_in === $result;
+        });
+        return $return_data;
     }
 }
 
