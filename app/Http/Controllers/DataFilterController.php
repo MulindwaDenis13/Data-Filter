@@ -112,7 +112,7 @@ class DataFilterController extends Controller
                 }
             }
 
-            if ((count($name_checks) <= 0) || is_null($first_check_cash_book)) {
+            if ((count($name_checks) <= 0) && is_null($first_check_cash_book)) {
                 array_push($new_transactions_filter, $this->attach_new_object($bank_statement, 'Bank Statement'));
             }
         }
