@@ -82,12 +82,38 @@ class DataFilterController extends Controller
     {
         $new_transactions_filter = array();
 
+        $check_cash_books_with_ref = array_filter($cash_books, static function ($item) {
+            return $item->no !== "" || !is_null($item->no);
+        });
+
+        $check_cash_books_without_ref = array_filter($cash_books, static function ($item) {
+            return $item->no == "" || is_null($item->no);
+        });
+
         foreach ($bank_statements as $bank_statement) {
-            $check_cash_book = array_reduce($cash_books, static function ($next, $item) use ($bank_statement) {
+
+            $first_check_cash_book = array_reduce($check_cash_books_with_ref, static function ($next, $item) use ($bank_statement) {
                 return $next ?? ($item->no == $bank_statement->reference_no) ? $item : $next;
             }, null);
-            if (is_null($check_cash_book)) {
-                array_push($new_transactions_filter, $this->attach_new_object($bank_statement, 'Bank statement'));
+
+            $filter_cash_book_without_ref = array_filter($check_cash_books_without_ref, static function ($item) use ($bank_statement) {
+                return $item->date === $bank_statement->date && $item->amount === $bank_statement->money_in;
+            });
+
+            $split_name = explode(' ', $bank_statement->narration);
+            $name_checks = array();
+
+            foreach ($split_name as $split) {
+                $second_check_cash_book = array_reduce($filter_cash_book_without_ref, static function ($next, $item) use ($split) {
+                    return $next ?? (str_contains($item->name, $split)) ? $item : $next;
+                }, null);
+                if (is_null($second_check_cash_book)) {
+                    array_push($name_checks, $second_check_cash_book);
+                }
+            }
+
+            if ((count($name_checks) <= 0) || is_null($first_check_cash_book)) {
+                array_push($new_transactions_filter, $this->attach_new_object($bank_statement, 'Bank Statement'));
             }
         }
 
