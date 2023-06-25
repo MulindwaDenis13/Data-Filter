@@ -285,13 +285,38 @@
 
                 <div
                     class="absolute bg-white shadow-lg left-0 p-6 border mt-2 border-indigo-300 rounded-lg w-[97vw] mx-auto transition-all duration-500 ease-in-out translate-x-40 opacity-0 invisible peer-checked:opacity-100 peer-checked:visible peer-checked:translate-x-1">
-                    <button
-                        class="group rounded-2xl h-12 w-48 bg-indigo-500 font-bold text-lg text-white relative overflow-hidden">
-                        Export
-                        <div
-                            class="absolute duration-300 inset-0 w-full h-full transition-all scale-0 group-hover:scale-100 group-hover:bg-white/30 rounded-2xl">
+
+                    <!--dropdown-->
+                    <form id="export">
+                        <div class="flex">
+                            <div class="w-full md:w-[300px] px-3 mb-6 md:mb-0">
+                                <div class="relative">
+                                    <select
+                                        class="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+                                        id="grid-state">
+                                        <option value="cash">New CashBook</option>
+                                        <option value="bank">New BankStatement</option>
+                                    </select>
+                                    <div
+                                        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20">
+                                            <path
+                                                d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <button type="submit" id="export-btn"
+                                    class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
+                                    Export
+                                </button>
+                            </div>
                         </div>
-                    </button>
+                    </form>
+
+                    <!--dropdown-->
                     <section class="container px-4 mx-auto">
                         <div class="flex flex-col">
                             <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
@@ -545,6 +570,7 @@
     const cashBookModal = document.getElementById("cash-book-modal");
     const cashBookForm = document.getElementById('submit-cash');
     const bankStatementForm = document.getElementById('submit-bank');
+    const exportForm = document.getElementById('export');
 
     window.onload = function() {
         cashBookModal.style.display = 'none';
@@ -637,6 +663,31 @@
         request.open(method, url, true);
         request.send(data);
     }
+
+    exportForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        let data = document.getElementById('grid-state').value;
+        const exportRequest = new XMLHttpRequest();
+        exportRequest.onreadystatechange = function() {
+            if (exportRequest.readyState < 4) {
+                let exportBtn = document.getElementById('export-btn');
+                exportBtn.innerHTML = 'Please Wait...';
+                exportBtn.style.pointerEvents = 'none';
+            }
+            if (exportRequest.readyState == 4 && exportRequest.status == 200) {
+                const blob = new Blob([exportRequest.responseText], {
+                    type: `application/xlsx`,
+                });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `${data}.xlsx`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+            }
+        }
+        exportRequest.open('GET', `/api/export/${data}`, true)
+        exportRequest.send();
+    });
 </script>
 
 </html>

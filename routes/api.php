@@ -27,3 +27,5 @@ Route::group(['prefix' => 'cash-book'], function () {
 Route::group(['prefix' => 'bank-statement'], function () {
     Route::post('import', [DataFilterController::class, 'import_bank_statement'])->name('bank_statement.import');
 });
+
+Route::get('export/{value}', [DataFilterController::class, 'export_data'])->name('export');
